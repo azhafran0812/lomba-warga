@@ -2,20 +2,75 @@
 <html lang="id">
 <head>
     <title>Pendaftaran Lomba Fotografi Warga</title>
+    <!-- Firebase SDK versi CDN -->
+    <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-auth-compat.js"></script>
+    <style>
+        .hidden { display: none; }
+    </style>
 </head>
 <body>
     <h1>Pendaftaran "Merah Putih di Sekitar Kita"</h1>
-    <form id="formDaftar">
-        <input type="text" id="nama" placeholder="Nama Lengkap" required><br><br>
-        <input type="email" id="email" placeholder="Email (untuk konfirmasi)" required><br><br>
-        <input type="text" id="blok" placeholder="Blok Rumah (Cth: A2 No. 5)" required><br><br>
-        <button type="submit">Daftar Sekarang</button>
-    </form>
+    
+    <!-- Tombol Login -->
+    <div id="loginSection">
+        <p>Silakan login menggunakan akun Google untuk mendaftar.</p>
+        <button id="btnLogin">Login dengan Google</button>
+    </div>
+
+    <!-- Form Pendaftaran (Awalnya Disembunyikan) -->
+    <div id="formSection" class="hidden">
+        <p>Login sebagai: <strong id="userEmail"></strong> <button id="btnLogout">Logout</button></p>
+        <form id="formDaftar">
+            <input type="text" id="nama" placeholder="Nama Lengkap" required><br><br>
+            <input type="text" id="blok" placeholder="Blok Rumah (Cth: A2 No. 5)" required><br><br>
+            <!-- Input email dihapus karena kita ambil otomatis dari Google Auth -->
+            <button type="submit">Daftar Sekarang</button>
+        </form>
+    </div>
 
     <h2>Daftar Peserta Sementara:</h2>
     <ul id="listPeserta"></ul>
 
     <script>
+        // Masukkan konfigurasi dari Firebase Console di sini
+        const firebaseConfig = {
+                    apiKey: "AIzaSyAMS5XVZQ4se8K5dSPOjJQiKb4DAYHXoqk",
+                    authDomain: "lomba-komunitas.firebaseapp.com",
+                    databaseURL: "https://lomba-komunitas-default-rtdb.asia-southeast1.firebasedatabase.app",
+                    projectId: "lomba-komunitas",
+                    storageBucket: "lomba-komunitas.firebasestorage.app",
+                    messagingSenderId: "141814332992",
+                    appId: "1:141814332992:web:82bd1c38e15019c567e9a5"
+                    };
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const provider = new firebase.auth.GoogleAuthProvider();
+
+        let currentIdToken = null;
+
+        // Listener Status Login
+        auth.onAuthStateChanged(async (user) => {
+            if (user) {
+                // Jika sudah login
+                document.getElementById('loginSection').classList.add('hidden');
+                document.getElementById('formSection').classList.remove('hidden');
+                document.getElementById('userEmail').innerText = user.email;
+                
+                // Ambil token untuk dikirim ke backend
+                currentIdToken = await user.getIdToken();
+            } else {
+                // Jika belum login
+                document.getElementById('loginSection').classList.remove('hidden');
+                document.getElementById('formSection').classList.add('hidden');
+                currentIdToken = null;
+            }
+        });
+
+        // Aksi Tombol Login/Logout
+        document.getElementById('btnLogin').addEventListener('click', () => auth.signInWithPopup(provider));
+        document.getElementById('btnLogout').addEventListener('click', () => auth.signOut());
+
         // Handle Submit Form
         document.getElementById('formDaftar').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -24,32 +79,35 @@
             
             const data = {
                 nama: document.getElementById('nama').value,
-                email: document.getElementById('email').value,
                 blok: document.getElementById('blok').value
             };
 
             const res = await fetch('/api/daftar', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    // Kirim token ke backend lewat header Authorization
+                    'Authorization': `Bearer ${currentIdToken}` 
+                },
                 body: JSON.stringify(data)
             });
 
+            const result = await res.json();
             if(res.ok) {
                 alert('Berhasil! Cek email Anda.');
-                loadPeserta(); // Refresh daftar
+                loadPeserta();
             } else {
-                alert('Gagal mendaftar.');
+                alert('Error: ' + result.error);
             }
             btn.innerText = 'Daftar Sekarang';
         });
 
-        // Load Daftar Peserta
+        // Load Daftar Peserta (tetap sama)
         async function loadPeserta() {
             const res = await fetch('/api/peserta');
             const data = await res.json();
             const list = document.getElementById('listPeserta');
             list.innerHTML = '';
-            
             for (let id in data) {
                 const li = document.createElement('li');
                 li.innerText = `${data[id].nama} - Blok ${data[id].blok}`;

@@ -29,6 +29,54 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+const verifikasiToken = async (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Akses ditolak. Silakan login terlebih dahulu.' });
+  }
+
+  const idToken = authHeader.split('Bearer ')[1];
+
+  try {
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
+    req.user = decodedToken; 
+    next();
+  } catch (error) {
+    return res.status(401).json({ error: 'Token otentikasi tidak valid.' });
+  }
+};
+
+
+app.post('/api/daftar', verifikasiToken, async (req, res) => {
+  
+  const emailGoogle = req.user.email; 
+  const { nama, blok } = req.body;
+
+  try {
+    const pesertaRef = db.ref('lomba_fotografi/peserta').push();
+    await pesertaRef.set({ 
+      nama, 
+      email: emailGoogle, 
+      blok, 
+      waktu_daftar: new Date().toISOString() 
+    });
+
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: emailGoogle,
+      subject: 'Konfirmasi Pendaftaran Lomba "Merah Putih di Sekitar Kita"',
+      text: `Halo ${nama} (Blok ${blok}),\n\nPendaftaran Anda menggunakan akun ${emailGoogle} berhasil! Jangan lupa batas akhir pengumpulan karya adalah 15 Agustus jam 20.00 WIB.\n\nSalam, Panitia.`
+    };
+    await transporter.sendMail(mailOptions);
+
+    res.status(200).json({ message: 'Pendaftaran sukses!' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Gagal mendaftar' });
+  }
+});
+
 // Endpoint Pendaftaran
 app.post("/api/daftar", async (req, res) => {
   const { nama, email, blok } = req.body;
