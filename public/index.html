@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <title>Pendaftaran Lomba Fotografi Warga</title>
+</head>
+<body>
+    <h1>Pendaftaran "Merah Putih di Sekitar Kita"</h1>
+    <form id="formDaftar">
+        <input type="text" id="nama" placeholder="Nama Lengkap" required><br><br>
+        <input type="email" id="email" placeholder="Email (untuk konfirmasi)" required><br><br>
+        <input type="text" id="blok" placeholder="Blok Rumah (Cth: A2 No. 5)" required><br><br>
+        <button type="submit">Daftar Sekarang</button>
+    </form>
+
+    <h2>Daftar Peserta Sementara:</h2>
+    <ul id="listPeserta"></ul>
+
+    <script>
+        // Handle Submit Form
+        document.getElementById('formDaftar').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = e.target.querySelector('button');
+            btn.innerText = 'Mengirim...';
+            
+            const data = {
+                nama: document.getElementById('nama').value,
+                email: document.getElementById('email').value,
+                blok: document.getElementById('blok').value
+            };
+
+            const res = await fetch('/api/daftar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            if(res.ok) {
+                alert('Berhasil! Cek email Anda.');
+                loadPeserta(); // Refresh daftar
+            } else {
+                alert('Gagal mendaftar.');
+            }
+            btn.innerText = 'Daftar Sekarang';
+        });
+
+        // Load Daftar Peserta
+        async function loadPeserta() {
+            const res = await fetch('/api/peserta');
+            const data = await res.json();
+            const list = document.getElementById('listPeserta');
+            list.innerHTML = '';
+            
+            for (let id in data) {
+                const li = document.createElement('li');
+                li.innerText = `${data[id].nama} - Blok ${data[id].blok}`;
+                list.appendChild(li);
+            }
+        }
+        loadPeserta();
+    </script>
+</body>
+</html>
