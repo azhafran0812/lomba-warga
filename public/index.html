@@ -1,119 +1,332 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <title>Pendaftaran Lomba Fotografi Warga</title>
-    <!-- Firebase SDK versi CDN -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Merah Putih di Sekitar Kita | Lomba Fotografi Warga</title>
+    <!-- Tailwind CSS untuk Styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome untuk Ikon -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-auth-compat.js"></script>
-    <style>
-        .hidden { display: none; }
-    </style>
-</head>
-<body>
-    <h1>Pendaftaran "Merah Putih di Sekitar Kita"</h1>
-    
-    <!-- Tombol Login -->
-    <div id="loginSection">
-        <p>Silakan login menggunakan akun Google untuk mendaftar.</p>
-        <button id="btnLogin">Login dengan Google</button>
-    </div>
-
-    <!-- Form Pendaftaran (Awalnya Disembunyikan) -->
-    <div id="formSection" class="hidden">
-        <p>Login sebagai: <strong id="userEmail"></strong> <button id="btnLogout">Logout</button></p>
-        <form id="formDaftar">
-            <input type="text" id="nama" placeholder="Nama Lengkap" required><br><br>
-            <input type="text" id="blok" placeholder="Blok Rumah (Cth: A2 No. 5)" required><br><br>
-            <!-- Input email dihapus karena kita ambil otomatis dari Google Auth -->
-            <button type="submit">Daftar Sekarang</button>
-        </form>
-    </div>
-
-    <h2>Daftar Peserta Sementara:</h2>
-    <ul id="listPeserta"></ul>
 
     <script>
-        // Masukkan konfigurasi dari Firebase Console di sini
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Poppins', 'sans-serif'] },
+                    colors: {
+                        merah: '#E52B2D',
+                        merahGelap: '#B31B1D'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans antialiased selection:bg-merah selection:text-white">
+
+    <!-- Navbar -->
+    <nav class="bg-white shadow-md fixed w-full z-50 top-0">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <div class="flex-shrink-0 flex items-center gap-2">
+                    <i class="fa-solid fa-camera-retro text-merah text-2xl"></i>
+                    <span class="font-bold text-xl tracking-tight text-gray-900">Lensa<span class="text-merah">Warga</span></span>
+                </div>
+                <div>
+                    <button id="navLoginBtn" class="bg-merah hover:bg-merahGelap text-white px-4 py-2 rounded-lg font-semibold transition hidden shadow-md">
+                        <i class="fa-brands fa-google mr-2"></i> Login Google
+                    </button>
+                    <div id="navUserInfo" class="hidden flex items-center gap-4">
+                        <span class="text-sm font-medium text-gray-600 hidden md:block" id="navEmail"></span>
+                        <button id="navLogoutBtn" class="text-red-500 hover:text-red-700 font-semibold text-sm">Logout</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <div class="relative pt-24 pb-12 md:pt-32 md:pb-20 bg-gradient-to-br from-merah to-merahGelap text-white overflow-hidden">
+        <div class="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 text-center relative z-10">
+            <span class="bg-white/20 px-3 py-1 rounded-full text-sm font-semibold tracking-wide border border-white/30 uppercase">Komunitas Perumahan</span>
+            <h1 class="mt-6 text-4xl md:text-6xl font-bold leading-tight drop-shadow-lg">
+                Merah Putih <br /> <span class="text-yellow-300">di Sekitar Kita</span>
+            </h1>
+            <p class="mt-6 text-lg md:text-xl text-red-100 max-w-2xl mx-auto">
+                Tunjukkan kreativitas dan semangat kemerdekaan melalui lensa Anda. Unggah karya terbaik Anda dan menangkan hadiah menarik!
+            </p>
+            <div class="mt-8 flex justify-center gap-4">
+                <a href="#form-section" class="bg-white text-merah px-6 py-3 rounded-lg font-bold shadow-xl hover:bg-gray-100 transition duration-300 transform hover:-translate-y-1">
+                    Kirim Karya Sekarang
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Area -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 grid grid-cols-1 md:grid-cols-12 gap-8" id="form-section">
+        
+        <!-- Kolom Kiri: Form Pendaftaran -->
+        <div class="md:col-span-7">
+            <div class="glass-card rounded-2xl shadow-xl overflow-hidden">
+                <div class="bg-gray-900 text-white px-6 py-4 flex justify-between items-center">
+                    <h2 class="text-xl font-bold"><i class="fa-solid fa-file-signature mr-2 text-merah"></i> Formulir Submisi Karya</h2>
+                    <span class="text-xs bg-merah px-2 py-1 rounded">Batas: 15 Agustus 2026</span>
+                </div>
+                
+                <div class="p-6 md:p-8">
+                    <!-- State 1: Belum Login -->
+                    <div id="loginState" class="text-center py-10">
+                        <div class="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="fa-solid fa-lock text-merah text-3xl"></i>
+                        </div>
+                        <h3 class="text-xl font-semibold mb-2">Akses Terkunci</h3>
+                        <p class="text-gray-500 mb-6">Silakan login menggunakan akun Google Anda untuk mengisi formulir pendaftaran dan mengirim karya foto.</p>
+                        <button id="mainLoginBtn" class="bg-merah hover:bg-merahGelap text-white px-6 py-3 rounded-xl font-bold shadow-lg transition w-full md:w-auto">
+                            <i class="fa-brands fa-google mr-2"></i> Login dengan Google
+                        </button>
+                    </div>
+
+                    <!-- State 2: Sudah Login (Formulir) -->
+                    <form id="formDaftar" class="hidden space-y-5">
+                        <div class="bg-blue-50 border border-blue-200 text-blue-800 rounded-lg p-4 text-sm flex items-start">
+                            <i class="fa-solid fa-circle-info mt-1 mr-3 text-blue-500"></i>
+                            <p>Anda login sebagai <strong id="formEmailLabel" class="block mt-1"></strong></p>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-1">Nama Lengkap</label>
+                                <input type="text" id="nama" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-merah focus:border-merah outline-none transition" placeholder="Sesuai KTP/KK" required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-1">Blok Rumah</label>
+                                <input type="text" id="blok" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-merah focus:border-merah outline-none transition" placeholder="Cth: Blok A2 No. 15" required>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">Judul Karya Foto</label>
+                            <input type="text" id="judul" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-merah focus:border-merah outline-none transition" placeholder="Cth: Senyum Kemerdekaan di Pagi Hari" required>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">Link Foto Karya</label>
+                            <p class="text-xs text-gray-500 mb-2">Unggah foto Anda ke Google Drive (pastikan akses 'Anyone with link') atau Instagram, lalu paste link-nya di sini.</p>
+                            <input type="url" id="link_foto" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-merah focus:border-merah outline-none transition" placeholder="https://drive.google.com/..." required>
+                        </div>
+
+                        <div id="alertBox" class="hidden rounded-lg p-4 text-sm font-medium"></div>
+
+                        <button type="submit" id="submitBtn" class="w-full bg-merah hover:bg-merahGelap text-white px-6 py-4 rounded-xl font-bold text-lg shadow-lg transition flex justify-center items-center gap-2">
+                            <i class="fa-solid fa-paper-plane"></i> Submit Karya
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Kolom Kanan: Galeri/Daftar Peserta Real-time -->
+        <div class="md:col-span-5">
+            <div class="glass-card rounded-2xl shadow-lg overflow-hidden h-full flex flex-col">
+                <div class="bg-gray-100 border-b border-gray-200 px-6 py-4">
+                    <h2 class="text-lg font-bold text-gray-800">
+                        <i class="fa-solid fa-users text-merah mr-2"></i> Pendaftar Terbaru
+                    </h2>
+                </div>
+                <div class="p-6 flex-grow overflow-y-auto max-h-[500px]">
+                    <ul id="listPeserta" class="space-y-4">
+                        <!-- Data peserta akan dimuat di sini oleh JavaScript -->
+                        <div class="text-center text-gray-400 py-8 animate-pulse">
+                            <i class="fa-solid fa-spinner fa-spin text-2xl mb-2"></i>
+                            <p class="text-sm">Memuat data peserta...</p>
+                        </div>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-gray-400 py-8 text-center text-sm border-t-4 border-merah">
+        <p>&copy; 2026 Panitia Lomba Fotografi Warga. All rights reserved.</p>
+    </footer>
+
+    <script>
+        // =========================================================================
+        // 1. GANTI BAGIAN INI DENGAN FIREBASE CONFIG MILIK ANDA
+        // =========================================================================
         const firebaseConfig = {
-                    apiKey: "AIzaSyAMS5XVZQ4se8K5dSPOjJQiKb4DAYHXoqk",
-                    authDomain: "lomba-komunitas.firebaseapp.com",
-                    databaseURL: "https://lomba-komunitas-default-rtdb.asia-southeast1.firebasedatabase.app",
-                    projectId: "lomba-komunitas",
-                    storageBucket: "lomba-komunitas.firebasestorage.app",
-                    messagingSenderId: "141814332992",
-                    appId: "1:141814332992:web:82bd1c38e15019c567e9a5"
-                    };
+            apiKey: "AIzaSyAMS5XVZQ4se8K5dSPOjJQiKb4DAYHXoqk",
+            authDomain: "lomba-komunitas.firebaseapp.com",
+            databaseURL: "https://lomba-komunitas-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "lomba-komunitas",
+            storageBucket: "lomba-komunitas.firebasestorage.app",
+            messagingSenderId: "141814332992",
+            appId: "1:141814332992:web:82bd1c38e15019c567e9a5"
+        };
+
+        // =========================================================================
+
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const provider = new firebase.auth.GoogleAuthProvider();
 
         let currentIdToken = null;
 
-        // Listener Status Login
+        // Elemen DOM
+        const navLoginBtn = document.getElementById('navLoginBtn');
+        const navUserInfo = document.getElementById('navUserInfo');
+        const navEmail = document.getElementById('navEmail');
+        const navLogoutBtn = document.getElementById('navLogoutBtn');
+        
+        const loginState = document.getElementById('loginState');
+        const formDaftar = document.getElementById('formDaftar');
+        const formEmailLabel = document.getElementById('formEmailLabel');
+        const mainLoginBtn = document.getElementById('mainLoginBtn');
+        
+        const alertBox = document.getElementById('alertBox');
+        const submitBtn = document.getElementById('submitBtn');
+
+        // Fungsi Login & Logout
+        const doLogin = () => { auth.signInWithPopup(provider).catch(err => alert("Gagal Login: " + err.message)); };
+        const doLogout = () => { auth.signOut(); };
+
+        navLoginBtn.addEventListener('click', doLogin);
+        mainLoginBtn.addEventListener('click', doLogin);
+        navLogoutBtn.addEventListener('click', doLogout);
+
+        // Listener Auth Firebase
         auth.onAuthStateChanged(async (user) => {
             if (user) {
-                // Jika sudah login
-                document.getElementById('loginSection').classList.add('hidden');
-                document.getElementById('formSection').classList.remove('hidden');
-                document.getElementById('userEmail').innerText = user.email;
-                
-                // Ambil token untuk dikirim ke backend
+                // UI Jika Login
+                navLoginBtn.classList.add('hidden');
+                navUserInfo.classList.remove('hidden');
+                navUserInfo.classList.add('flex');
+                navEmail.innerText = user.email;
+
+                loginState.classList.add('hidden');
+                formDaftar.classList.remove('hidden');
+                formEmailLabel.innerText = user.email;
+
                 currentIdToken = await user.getIdToken();
             } else {
-                // Jika belum login
-                document.getElementById('loginSection').classList.remove('hidden');
-                document.getElementById('formSection').classList.add('hidden');
+                // UI Jika Logout
+                navLoginBtn.classList.remove('hidden');
+                navUserInfo.classList.add('hidden');
+                navUserInfo.classList.remove('flex');
+                
+                loginState.classList.remove('hidden');
+                formDaftar.classList.add('hidden');
+                
                 currentIdToken = null;
             }
         });
 
-        // Aksi Tombol Login/Logout
-        document.getElementById('btnLogin').addEventListener('click', () => auth.signInWithPopup(provider));
-        document.getElementById('btnLogout').addEventListener('click', () => auth.signOut());
+        // Tampilkan Notifikasi (Toast)
+        function showAlert(message, isSuccess = true) {
+            alertBox.classList.remove('hidden', 'bg-green-100', 'text-green-800', 'bg-red-100', 'text-red-800');
+            alertBox.classList.add(isSuccess ? 'bg-green-100' : 'bg-red-100', isSuccess ? 'text-green-800' : 'text-red-800');
+            alertBox.innerHTML = `<i class="fa-solid ${isSuccess ? 'fa-check-circle' : 'fa-circle-exclamation'} mr-2"></i> ${message}`;
+        }
 
         // Handle Submit Form
-        document.getElementById('formDaftar').addEventListener('submit', async (e) => {
+        formDaftar.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const btn = e.target.querySelector('button');
-            btn.innerText = 'Mengirim...';
+            
+            // UI Loading
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mengirim...';
+            submitBtn.classList.add('opacity-75', 'cursor-not-allowed');
+            alertBox.classList.add('hidden');
             
             const data = {
                 nama: document.getElementById('nama').value,
-                blok: document.getElementById('blok').value
+                blok: document.getElementById('blok').value,
+                judul: document.getElementById('judul').value,
+                link_foto: document.getElementById('link_foto').value
             };
 
-            const res = await fetch('/api/daftar', {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    // Kirim token ke backend lewat header Authorization
-                    'Authorization': `Bearer ${currentIdToken}` 
-                },
-                body: JSON.stringify(data)
-            });
+            try {
+                const res = await fetch('/api/daftar', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${currentIdToken}` 
+                    },
+                    body: JSON.stringify(data)
+                });
 
-            const result = await res.json();
-            if(res.ok) {
-                alert('Berhasil! Cek email Anda.');
-                loadPeserta();
-            } else {
-                alert('Error: ' + result.error);
+                const result = await res.json();
+                
+                if(res.ok) {
+                    showAlert('Berhasil! Cek email Anda untuk konfirmasi pendaftaran.');
+                    formDaftar.reset();
+                    loadPeserta(); // Refresh daftar peserta otomatis
+                } else {
+                    showAlert(result.error || 'Terjadi kesalahan saat mendaftar.', false);
+                }
+            } catch (error) {
+                showAlert('Gagal terhubung ke server. Periksa koneksi Anda.', false);
+            } finally {
+                // Kembalikan tombol ke semula
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Submit Karya';
+                submitBtn.classList.remove('opacity-75', 'cursor-not-allowed');
             }
-            btn.innerText = 'Daftar Sekarang';
         });
 
-        // Load Daftar Peserta (tetap sama)
+        // Load Daftar Peserta Secara Realtime dari Backend
         async function loadPeserta() {
-            const res = await fetch('/api/peserta');
-            const data = await res.json();
-            const list = document.getElementById('listPeserta');
-            list.innerHTML = '';
-            for (let id in data) {
-                const li = document.createElement('li');
-                li.innerText = `${data[id].nama} - Blok ${data[id].blok}`;
-                list.appendChild(li);
+            try {
+                const res = await fetch('/api/peserta');
+                const data = await res.json();
+                const list = document.getElementById('listPeserta');
+                list.innerHTML = ''; // Bersihkan loading
+                
+                if (Object.keys(data).length === 0) {
+                    list.innerHTML = '<p class="text-sm text-gray-500 text-center py-4">Belum ada peserta yang mendaftar.</p>';
+                    return;
+                }
+
+                // Render setiap peserta
+                for (let id in data) {
+                    const p = data[id];
+                    const li = document.createElement('li');
+                    li.className = "bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex items-start gap-3 hover:shadow-md transition";
+                    li.innerHTML = `
+                        <div class="bg-red-100 text-merah w-10 h-10 rounded-full flex items-center justify-center font-bold flex-shrink-0">
+                            ${p.nama.charAt(0).toUpperCase()}
+                        </div>
+                        <div class="overflow-hidden">
+                            <p class="font-bold text-gray-800 text-sm truncate">${p.nama} <span class="text-xs font-normal text-gray-500">• Blok ${p.blok}</span></p>
+                            <p class="text-xs text-merah font-medium mt-1 truncate"><i class="fa-solid fa-image mr-1"></i> "${p.judul_foto || 'Karya Disubmit'}"</p>
+                        </div>
+                    `;
+                    // Masukkan ke bagian atas list
+                    list.prepend(li);
+                }
+            } catch (e) {
+                document.getElementById('listPeserta').innerHTML = '<p class="text-sm text-red-500 text-center py-4">Gagal memuat data.</p>';
             }
         }
+
+        // Panggil saat halaman pertama dibuka
         loadPeserta();
     </script>
 </body>

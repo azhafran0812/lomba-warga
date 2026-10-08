@@ -78,32 +78,35 @@ app.post('/api/daftar', verifikasiToken, async (req, res) => {
 });
 
 // Endpoint Pendaftaran
-app.post("/api/daftar", async (req, res) => {
-  const { nama, email, blok } = req.body;
+app.post('/api/daftar', verifikasiToken, async (req, res) => {
+  const emailGoogle = req.user.email; 
+  // 1. Tangkap 'judul' dan 'link_foto' dari frontend
+  const { nama, blok, judul, link_foto } = req.body;
 
   try {
-    // Simpan ke Firebase
-    const pesertaRef = db.ref("lomba_fotografi/peserta").push();
-    await pesertaRef.set({
-      nama,
-      email,
-      blok,
-      waktu_daftar: new Date().toISOString(),
+    const pesertaRef = db.ref('lomba_fotografi/peserta').push();
+    // 2. Simpan juga judul_foto dan link_foto ke Database
+    await pesertaRef.set({ 
+      nama, 
+      email: emailGoogle, 
+      blok, 
+      judul_foto: judul,     // Tambahan baru
+      link_foto: link_foto,  // Tambahan baru
+      waktu_daftar: new Date().toISOString() 
     });
 
-    // Kirim Email
     const mailOptions = {
       from: process.env.EMAIL_USER,
-      to: email,
-      subject: 'Konfirmasi Pendaftaran Lomba "Merah Putih di Sekitar Kita"',
-      text: `Halo ${nama} (Blok ${blok}),\n\nPendaftaran Anda berhasil! Jangan lupa batas akhir pengumpulan karya adalah 15 Agustus jam 20.00 WIB.\n\nSalam, Panitia.`,
+      to: emailGoogle,
+      subject: 'Karya Berhasil Diterima! - Lomba Merah Putih',
+      text: `Halo ${nama} (Blok ${blok}),\n\nKarya fotografi Anda yang berjudul "${judul}" telah berhasil masuk ke sistem kami menggunakan akun ${emailGoogle}.\n\nJika juri kesulitan mengakses link foto Anda, kami akan membalas email ini. Pengumuman pemenang akan diinfokan di grup WhatsApp warga.\n\nSalam, Panitia.`
     };
     await transporter.sendMail(mailOptions);
 
-    res.status(200).json({ message: "Pendaftaran sukses!" });
+    res.status(200).json({ message: 'Pendaftaran sukses!' });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Gagal mendaftar" });
+    res.status(500).json({ error: 'Gagal mendaftar' });
   }
 });
 
