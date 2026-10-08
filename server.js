@@ -8,6 +8,7 @@ const app = express();
 app.use(express.json());
 app.use(express.static("public")); 
 
+console.log("Cek DB URL:", process.env.FIREBASE_DATABASE_URL);
 // Inisialisasi Firebase Admin
 admin.initializeApp({
   credential: admin.credential.cert({
