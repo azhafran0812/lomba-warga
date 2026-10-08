@@ -13,7 +13,7 @@ admin.initializeApp({
   credential: admin.credential.cert({
     projectId: process.env.FIREBASE_PROJECT_ID,
     clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-    privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n"),
+    privateKey: process.env.FIREBASE_PRIVATE_KEY ? process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n') : undefined,
   }),
   databaseURL: process.env.FIREBASE_DATABASE_URL,
 });
@@ -90,8 +90,8 @@ app.post('/api/daftar', verifikasiToken, async (req, res) => {
       nama, 
       email: emailGoogle, 
       blok, 
-      judul_foto: judul,     // Tambahan baru
-      link_foto: link_foto,  // Tambahan baru
+      judul_foto: judul,     
+      link_foto: link_foto,  
       waktu_daftar: new Date().toISOString() 
     });
 
